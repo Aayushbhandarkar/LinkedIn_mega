@@ -7,7 +7,7 @@ import { LuSendHorizontal } from "react-icons/lu"
 import { FiMoreHorizontal } from "react-icons/fi"
 import axios from 'axios'
 import { authDataContext } from '../context/AuthContext'
-import { userDataContext } from '../context/userContext'
+import { userDataContext } from '../context/UserContext'
 import { io } from "socket.io-client"
 import ConnectionButton from './ConnectionButton'
 
