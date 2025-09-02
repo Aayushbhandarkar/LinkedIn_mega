@@ -14,6 +14,14 @@ const ChatProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [socket, setSocket] = useState(null);
 
+  // Initialize Socket.IO
+  useEffect(() => {
+    const newSocket = io(serverUrl, { withCredentials: true });
+    setSocket(newSocket);
+
+    return () => newSocket.disconnect();
+  }, [serverUrl]);
+
   // Fetch all users for chat
   const fetchUsers = async () => {
     try {
@@ -22,20 +30,9 @@ const ChatProvider = ({ children }) => {
       });
       setUsers(res.data);
     } catch (err) {
-      console.log("Error fetching users:", err);
+      console.error("Error fetching users:", err);
     }
   };
-
-  // Initialize Socket.IO
-  useEffect(() => {
-    const newSocket = io(serverUrl, {
-      withCredentials: true,
-
-    });
-    setSocket(newSocket);
-
-    return () => newSocket.disconnect();
-  }, [serverUrl]);
 
   useEffect(() => {
     fetchUsers();
