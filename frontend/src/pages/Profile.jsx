@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import Nav from '../components/Nav'
 import dp from "../assets/dp.webp"
-import { userDataContext } from '../context/userContext'
+import { userDataContext } from '../context/UserContext'
 import { HiPencil } from "react-icons/hi2"
 import { authDataContext } from '../context/AuthContext'
 import EditProfile from '../components/EditProfile'
