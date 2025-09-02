@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import Nav from '../components/Nav'
 import { authDataContext } from '../context/AuthContext'
-import { userDataContext } from '../context/userContext'
+import { userDataContext } from '../context/UserContext'
 import axios from 'axios'
 import { RxCross1 } from 'react-icons/rx'
 import dp from '../assets/dp.webp'
