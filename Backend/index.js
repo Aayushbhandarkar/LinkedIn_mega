@@ -11,7 +11,7 @@ import http from "http";
 import { Server } from "socket.io";
 import notificationRouter from "./routes/notification.routes.js";
 
-// 🟢 NEW IMPORTS for chat
+
 import Chat from "./models/chat.model.js";
 import Message from "./models/message.model.js";
 
@@ -20,12 +20,12 @@ let app = express();
 let server = http.createServer(app);
 
 export const io = new Server(server, {
-  cors: { origin: "http://localhost:5173", credentials: true }
+  cors: { origin: "https://linkedin-mega-11frontend.onrender.com", credentials: true }
 });
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(cors({ origin: "https://linkedin-mega-11frontend.onrender.com", credentials: true }));
 
 let port = process.env.PORT || 5000;
 
@@ -36,7 +36,7 @@ app.use("/api/post", postRouter);
 app.use("/api/connection", connectionRouter);
 app.use("/api/notification", notificationRouter);
 
-// 🟢 Chat routes add karne ke liye (Step 2 me banayenge)
+
 import chatRouter from "./routes/chat.routes.js";
 app.use("/api/chat", chatRouter);
 
@@ -62,7 +62,7 @@ io.on("connection", (socket) => {
   // Send message
   socket.on("sendMessage", async ({ chatId, senderId, receiverId, message }) => {
     try {
-      // Save to DB 🟢 now using Message model
+      
       const newMessage = new Message({ chatId, senderId, receiverId, message });
       await newMessage.save();
 
