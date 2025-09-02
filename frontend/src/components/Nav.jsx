@@ -6,7 +6,7 @@ import { FaUserGroup } from "react-icons/fa6"
 import { IoNotificationsSharp } from "react-icons/io5"
 import { FiMessageSquare } from "react-icons/fi"
 import dp from "../assets/dp.webp"
-import { userDataContext } from '../context/userContext'
+import { userDataContext } from '../context/UserContext'
 import { authDataContext } from '../context/AuthContext'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
