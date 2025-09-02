@@ -11,7 +11,6 @@ import http from "http";
 import { Server } from "socket.io";
 import notificationRouter from "./routes/notification.routes.js";
 
-
 import Chat from "./models/chat.model.js";
 import Message from "./models/message.model.js";
 
@@ -19,23 +18,40 @@ dotenv.config();
 let app = express();
 let server = http.createServer(app);
 
-export const io = new Server(server, {
-  cors: { origin: "https://linkedin-mega-11frontend.onrender.com", credentials: true }
-});
+// ✅ Allowed origins (deployed + local for testing)
+const allowedOrigins = [
+  "https://linkedin-mega-11frontend.onrender.com",
+  "http://localhost:3000",   // React local dev
+  "http://localhost:5173"    // Vite local dev
+];
 
+// --- Middleware ---
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: "https://linkedin-mega-11frontend.onrender.com", credentials: true }));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
+);
 
-let port = process.env.PORT || 5000;
+// --- Socket.io ---
+export const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 
 // --- Routes ---
+let port = process.env.PORT || 5000;
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/post", postRouter);
 app.use("/api/connection", connectionRouter);
 app.use("/api/notification", notificationRouter);
-
 
 import chatRouter from "./routes/chat.routes.js";
 app.use("/api/chat", chatRouter);
@@ -43,37 +59,30 @@ app.use("/api/chat", chatRouter);
 // --- Socket Maps ---
 export const userSocketMap = new Map();
 
-// --- Socket.io ---
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
 
-  // Register user
   socket.on("register", (userId) => {
     userSocketMap.set(userId, socket.id);
     console.log("User registered:", userId);
   });
 
-  // Join chat room
   socket.on("joinRoom", (chatId) => {
     socket.join(chatId);
     console.log(`Socket ${socket.id} joined room ${chatId}`);
   });
 
-  // Send message
   socket.on("sendMessage", async ({ chatId, senderId, receiverId, message }) => {
     try {
-      
       const newMessage = new Message({ chatId, senderId, receiverId, message });
       await newMessage.save();
 
-      // Emit to room
       io.to(chatId).emit("receiveMessage", newMessage);
     } catch (err) {
       console.error("Message save error:", err.message);
     }
   });
 
-  // Disconnect
   socket.on("disconnect", () => {
     for (let [key, value] of userSocketMap.entries()) {
       if (value === socket.id) userSocketMap.delete(key);
@@ -82,6 +91,7 @@ io.on("connection", (socket) => {
   });
 });
 
+// --- Server ---
 server.listen(port, () => {
   connectDb();
   console.log("Server started on port", port);
