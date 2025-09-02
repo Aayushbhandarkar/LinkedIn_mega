@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { authDataContext } from "./AuthContext";
 import axios from "axios";
@@ -14,9 +13,12 @@ const ChatProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [socket, setSocket] = useState(null);
 
-  // Initialize Socket.IO
+  // Initialize Socket.IO with correct URL and websocket transport
   useEffect(() => {
-    const newSocket = io(serverUrl, { withCredentials: true });
+    const newSocket = io(serverUrl, {
+      withCredentials: true,
+      transports: ["websocket"], 
+    });
     setSocket(newSocket);
 
     return () => newSocket.disconnect();
