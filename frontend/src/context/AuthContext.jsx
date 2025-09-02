@@ -3,7 +3,11 @@ import React, { createContext } from "react";
 export const authDataContext = createContext();
 
 function AuthContext({ children }) {
-  const serverUrl = "https://linkedin-mega-backend.onrender.com"; 
+  // ✅ Detect environment
+  const serverUrl =
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000" // Local backend
+      : "https://linkedin-mega-backend.onrender.com"; // Deployed backend
 
   const value = { serverUrl };
 
