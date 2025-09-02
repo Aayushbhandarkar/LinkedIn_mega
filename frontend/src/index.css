@@ -1,0 +1,18 @@
+/* index.css */
+@import "tailwindcss";
+
+/* Light Mode */
+body.light {
+  background-color: #ffffff;
+  color: #1f2937; /* gray-800 */
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #1f2937;
+  color: #f9fafb; /* gray-50 */
+}
+
+/* Buttons */
+button.light { background-color: #0a66c2; color: white; }
+button.dark { background-color: #2563eb; color: white; }
