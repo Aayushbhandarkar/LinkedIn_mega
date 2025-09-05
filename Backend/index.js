@@ -7,54 +7,67 @@ import cors from "cors";
 import userRouter from "./routes/user.routes.js";
 import postRouter from "./routes/post.routes.js";
 import connectionRouter from "./routes/connection.routes.js";
+import notificationRouter from "./routes/notification.routes.js";
+import chatRouter from "./routes/chat.routes.js";
 import http from "http";
 import { Server } from "socket.io";
-import notificationRouter from "./routes/notification.routes.js";
 
 import Chat from "./models/chat.model.js";
 import Message from "./models/message.model.js";
 
 dotenv.config();
-let app = express();
-let server = http.createServer(app);
+const app = express();
+const server = http.createServer(app);
 
-// ✅ Allowed origins (deployed + local for testing)
+// ✅ Allowed origins (frontend + local dev)
 const allowedOrigins = [
   "https://linkedin-mega-11frontend.onrender.com",
-  "http://localhost:3000",   // React local dev
-  "http://localhost:5173"    // Vite local dev
+  "http://localhost:3000",
+  "http://localhost:5173",
 ];
 
 // --- Middleware ---
 app.use(express.json());
 app.use(cookieParser());
+
+// --- CORS for Express ---
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      // allow requests with no origin (like mobile apps or Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
-// --- Socket.io ---
-export const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
-
 // --- Routes ---
-let port = process.env.PORT || 5000;
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/post", postRouter);
 app.use("/api/connection", connectionRouter);
 app.use("/api/notification", notificationRouter);
-
-import chatRouter from "./routes/chat.routes.js";
 app.use("/api/chat", chatRouter);
+
+// --- Socket.IO ---
+export const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
 
 // --- Socket Maps ---
 export const userSocketMap = new Map();
@@ -76,7 +89,6 @@ io.on("connection", (socket) => {
     try {
       const newMessage = new Message({ chatId, senderId, receiverId, message });
       await newMessage.save();
-
       io.to(chatId).emit("receiveMessage", newMessage);
     } catch (err) {
       console.error("Message save error:", err.message);
@@ -91,8 +103,9 @@ io.on("connection", (socket) => {
   });
 });
 
-// --- Server ---
-server.listen(port, () => {
-  connectDb();
-  console.log("Server started on port", port);
+// --- Start Server ---
+const port = process.env.PORT || 5000;
+server.listen(port, async () => {
+  await connectDb();
+  console.log(`Server running on port ${port}`);
 });
