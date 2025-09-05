@@ -1,84 +1,92 @@
-import React, { useContext, useEffect, useState } from 'react'
-import dp from "../assets/dp.webp"
-import moment from "moment"
-import { FaRegCommentDots } from "react-icons/fa"
-import { BiLike, BiSolidLike } from "react-icons/bi"
-import { LuSendHorizontal } from "react-icons/lu"
-import { FiMoreHorizontal } from "react-icons/fi"
-import axios from 'axios'
-import { authDataContext } from '../context/AuthContext'
-import { userDataContext } from '../context/UserContext'
-import { io } from "socket.io-client"
-import ConnectionButton from './ConnectionButton'
-
-let socket = io("http://localhost:8000")
+import React, { useContext, useEffect, useState, useRef } from 'react';
+import dp from "../assets/dp.webp";
+import moment from "moment";
+import { FaRegCommentDots } from "react-icons/fa";
+import { BiLike, BiSolidLike } from "react-icons/bi";
+import { LuSendHorizontal } from "react-icons/lu";
+import { FiMoreHorizontal } from "react-icons/fi";
+import axios from 'axios';
+import { authDataContext } from '../context/AuthContext';
+import { userDataContext } from '../context/UserContext';
+import ConnectionButton from './ConnectionButton';
 
 function Post({ id, author, like, comment, description, image, createdAt }) {
-  let [more, setMore] = useState(false)
-  let [menuOpen, setMenuOpen] = useState(false)  // for 3-dots menu
-  let { serverUrl } = useContext(authDataContext)
-  let { userData, getPost, handleGetProfile } = useContext(userDataContext)
-  let [likes, setLikes] = useState(like)
-  let [commentContent, setCommentContent] = useState("")
-  let [comments, setComments] = useState(comment)
-  let [showComment, setShowComment] = useState(false)
+  const [more, setMore] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [likes, setLikes] = useState(like);
+  const [comments, setComments] = useState(comment);
+  const [commentContent, setCommentContent] = useState("");
+  const [showComment, setShowComment] = useState(false);
+
+  const { serverUrl } = useContext(authDataContext);
+  const { userData, getPost, handleGetProfile } = useContext(userDataContext);
+
+  const socketRef = useRef(null);
+
+  // Initialize socket once
+  useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = window.socket || (window.socket = io(serverUrl, { withCredentials: true }));
+    }
+
+    const socket = socketRef.current;
+
+    socket.on("likeUpdated", ({ postId, likes }) => {
+      if (postId === id) setLikes(likes);
+    });
+
+    socket.on("commentAdded", ({ postId, comm }) => {
+      if (postId === id) setComments(comm);
+    });
+
+    socket.on("postDeleted", ({ postId }) => {
+      if (id === postId) getPost();
+    });
+
+    return () => {
+      socket.off("likeUpdated");
+      socket.off("commentAdded");
+      socket.off("postDeleted");
+    };
+  }, [id, serverUrl, getPost]);
 
   const handleLike = async () => {
     try {
-      let result = await axios.get(serverUrl + `/api/post/like/${id}`, { withCredentials: true })
-      setLikes(result.data.like)
-    } catch (error) {
-      console.log(error)
+      const result = await axios.get(`${serverUrl}/api/post/like/${id}`, { withCredentials: true });
+      setLikes(result.data.like);
+    } catch (err) {
+      console.log(err);
     }
-  }
+  };
 
   const handleComment = async (e) => {
-    e.preventDefault()
-    try {
-      let result = await axios.post(serverUrl + `/api/post/comment/${id}`, {
-        content: commentContent
-      }, { withCredentials: true })
-      setComments(result.data.comment)
-      setCommentContent("")
-    } catch (error) {
-      console.log(error)
-    }
-  }
+    e.preventDefault();
+    if (!commentContent.trim()) return;
 
-  // DELETE POST
+    try {
+      const result = await axios.post(`${serverUrl}/api/post/comment/${id}`, 
+        { content: commentContent }, 
+        { withCredentials: true }
+      );
+      setComments(result.data.comment);
+      setCommentContent("");
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   const handleDelete = async () => {
     try {
-      await axios.delete(serverUrl + `/api/post/delete/${id}`, { withCredentials: true })
-      getPost()  // refresh posts
-    } catch (error) {
-      console.log(error)
+      await axios.delete(`${serverUrl}/api/post/delete/${id}`, { withCredentials: true });
+      getPost();
+    } catch (err) {
+      console.log(err);
     }
-  }
-
-  useEffect(() => {
-    socket.on("likeUpdated", ({ postId, likes }) => {
-      if (postId === id) setLikes(likes)
-    })
-    socket.on("commentAdded", ({ postId, comm }) => {
-      if (postId === id) setComments(comm)
-    })
-    socket.on("postDeleted", ({ postId }) => {
-      if (id === postId) getPost()
-    })
-    return () => {
-      socket.off("likeUpdated")
-      socket.off("commentAdded")
-      socket.off("postDeleted")
-    }
-  }, [id])
-
-  useEffect(() => {
-    getPost()
-  }, [likes, comments])
+  };
 
   return (
     <div className="w-full bg-white rounded-xl shadow-md p-5 flex flex-col gap-4 hover:shadow-lg transition duration-300">
-      
+
       {/* Post Header */}
       <div className="flex justify-between items-start">
         <div 
@@ -89,16 +97,14 @@ function Post({ id, author, like, comment, description, image, createdAt }) {
             <img src={author.profileImage || dp} alt="" className="w-full h-full object-cover" />
           </div>
           <div className="truncate">
-            <h2 className="text-[18px] font-semibold text-gray-800 truncate">
-              {`${author.firstName} ${author.lastName}`}
-            </h2>
+            <h2 className="text-[18px] font-semibold text-gray-800 truncate">{`${author.firstName} ${author.lastName}`}</h2>
             <p className="text-[14px] text-gray-600 truncate">{author.headline}</p>
             <p className="text-[13px] text-gray-500">{moment(createdAt).fromNow()}</p>
           </div>
         </div>
 
         {/* 3-Dots Menu */}
-        {userData._id === author._id && (
+        {userData._id === author._id ? (
           <div className="relative">
             <FiMoreHorizontal
               className="w-6 h-6 cursor-pointer text-gray-600 hover:text-white hover:bg-gray-700 rounded-full p-1 transition"
@@ -115,9 +121,7 @@ function Post({ id, author, like, comment, description, image, createdAt }) {
               </div>
             )}
           </div>
-        )}
-
-        {userData._id !== author._id && (
+        ) : (
           <ConnectionButton userId={author._id} />
         )}
       </div>
@@ -135,7 +139,6 @@ function Post({ id, author, like, comment, description, image, createdAt }) {
         </button>
       )}
 
-      {/* Post Image */}
       {image && (
         <div className="w-full rounded-lg overflow-hidden mt-2">
           <img src={image} alt="" className="w-full max-h-[400px] object-cover rounded-lg shadow-sm" />
@@ -148,29 +151,22 @@ function Post({ id, author, like, comment, description, image, createdAt }) {
           <BiLike className="text-[#0a66c2]" />
           <span>{likes.length}</span>
         </div>
-        <div 
-          className="cursor-pointer hover:underline"
-          onClick={() => setShowComment(prev => !prev)}
-        >
+        <div className="cursor-pointer hover:underline" onClick={() => setShowComment(prev => !prev)}>
           {comments.length} comments
         </div>
       </div>
 
       {/* Action Buttons */}
       <div className="flex justify-around border-t pt-2 text-gray-600 text-[15px] font-medium">
-        {!likes.includes(userData._id) ? (
-          <button className="flex items-center gap-2 hover:bg-gray-100 p-2 rounded-lg transition" onClick={handleLike}>
-            <BiLike className="w-[22px] h-[22px]" />
-            Like
-          </button>
-        ) : (
-          <button className="flex items-center gap-2 text-[#0a66c2] font-semibold hover:bg-gray-100 p-2 rounded-lg transition" onClick={handleLike}>
-            <BiSolidLike className="w-[22px] h-[22px]" />
-            Liked
-          </button>
-        )}
+        <button
+          className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition ${likes.includes(userData._id) ? "text-[#0a66c2] font-semibold" : ""}`}
+          onClick={handleLike}
+        >
+          {likes.includes(userData._id) ? <BiSolidLike className="w-[22px] h-[22px]" /> : <BiLike className="w-[22px] h-[22px]" />}
+          {likes.includes(userData._id) ? "Liked" : "Like"}
+        </button>
 
-        <button 
+        <button
           className="flex items-center gap-2 hover:bg-gray-100 p-2 rounded-lg transition"
           onClick={() => setShowComment(prev => !prev)}
         >
@@ -179,13 +175,10 @@ function Post({ id, author, like, comment, description, image, createdAt }) {
         </button>
       </div>
 
-      {/* Comment Section */}
+      {/* Comments Section */}
       {showComment && (
         <div className="mt-3">
-          <form 
-            className="flex items-center gap-2 border rounded-lg px-3 py-2 hover:shadow-sm transition" 
-            onSubmit={handleComment}
-          >
+          <form className="flex items-center gap-2 border rounded-lg px-3 py-2 hover:shadow-sm transition" onSubmit={handleComment}>
             <input
               type="text"
               placeholder="Write a comment..."
@@ -216,7 +209,7 @@ function Post({ id, author, like, comment, description, image, createdAt }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default Post
+export default Post;
