@@ -1,6 +1,6 @@
 import React, { createContext } from "react";
 
-export const authDataContext = createContext();
+export const AuthDataContext = createContext();
 
 function AuthContext({ children }) {
   // ✅ Detect environment
@@ -12,9 +12,9 @@ function AuthContext({ children }) {
   const value = { serverUrl };
 
   return (
-    <authDataContext.Provider value={value}>
+    <AuthDataContext.Provider value={value}>
       {children}
-    </authDataContext.Provider>
+    </AuthDataContext.Provider>
   );
 }
 
