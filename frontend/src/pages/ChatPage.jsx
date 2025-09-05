@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useChat } from "../../context/ChatContext";
 import { RxCross1 } from "react-icons/rx";
 import { FiSearch } from "react-icons/fi";
-import { io } from "socket.io-client";
-import { v4 as uuidv4 } from "uuid";
 
 const ChatBox = () => {
   const { selectedChat, messages, setMessages, users, setSelectedChat } = useChat();
@@ -11,57 +9,28 @@ const ChatBox = () => {
   const [searchUser, setSearchUser] = useState("");
   const [isOpen, setIsOpen] = useState(true);
   const messagesEndRef = useRef(null);
-  const socketRef = useRef(null);
 
-  // ✅ Initialize socket only once
-  useEffect(() => {
-    socketRef.current = io(
-      import.meta.env.MODE === "development"
-        ? "http://localhost:5000"
-        : "https://linkedin-mega-backend.onrender.com"
-    );
-
-    // Listen for incoming messages
-    socketRef.current.on("receiveMessage", (msg) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, [setMessages]);
-
-  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedChat]);
 
   const sendMessage = (msg) => {
-    if (!msg.trim() || !selectedChat) return;
-
+    if (!msg.trim()) return;
     const msgData = {
-      id: uuidv4(),
       sender: "You",
       text: msg,
       timestamp: new Date(),
-      chatId: selectedChat.id || selectedChat._id,
+      id: Date.now(),
     };
-
-    // Add locally
     setMessages([...messages, msgData]);
-
-    // Send to server
-    socketRef.current.emit("sendMessage", msgData);
-
     setNewMsg("");
   };
 
   const deleteMessage = (msgId) => {
     setMessages(messages.filter((m) => m.id !== msgId));
-    socketRef.current.emit("deleteMessage", msgId); // optional if backend supports it
   };
 
-  const filteredUsers = users?.filter((user) =>
+  const filteredUsers = users?.filter(user =>
     user.name.toLowerCase().includes(searchUser.toLowerCase())
   );
 
@@ -80,6 +49,7 @@ const ChatBox = () => {
 
   return (
     <div className="fixed bottom-0 right-0 w-[400px] h-[500px] lg:h-[600px] flex flex-col border shadow-2xl bg-white rounded-t-xl overflow-hidden">
+      
       {/* Header */}
       <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-white">
         <div className="flex items-center gap-3">
@@ -135,11 +105,7 @@ const ChatBox = () => {
                     />
                     <div className="truncate">
                       <p className="font-medium text-gray-800 truncate">{user.name}</p>
-                      <span
-                        className={`text-xs ${
-                          user.online ? "text-green-500" : "text-gray-400"
-                        }`}
-                      >
+                      <span className={`text-xs ${user.online ? "text-green-500" : "text-gray-400"}`}>
                         {user.online ? "Online" : "Offline"}
                       </span>
                     </div>
@@ -155,13 +121,9 @@ const ChatBox = () => {
         <>
           {/* Messages */}
           <div className="flex-1 p-3 overflow-y-auto bg-gray-50 space-y-2">
-            {messages.length === 0 ? (
-              <p className="text-center text-gray-400 mt-5">No messages yet</p>
-            ) : (
-              messages.map((msg) => (
-                <Message key={msg.id} msg={msg} deleteMessage={deleteMessage} />
-              ))
-            )}
+            {messages.map((msg) => (
+              <Message key={msg.id} msg={msg} deleteMessage={deleteMessage} />
+            ))}
             <div ref={messagesEndRef} />
           </div>
           {/* Chat Input */}
@@ -209,27 +171,19 @@ const Message = ({ msg, deleteMessage }) => {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} relative`}>
       <div
-        className={`relative max-w-[70%] p-2 rounded-lg ${
-          isUser
-            ? "bg-blue-600 text-white rounded-br-none"
-            : "bg-gray-200 text-gray-800 rounded-bl-none"
-        }`}
+        className={`relative max-w-[70%] p-2 rounded-lg ${isUser ? "bg-blue-600 text-white rounded-br-none" : "bg-gray-200 text-gray-800 rounded-bl-none"}`}
       >
         {msg.text}
         {isUser && (
           <button
             onClick={() => deleteMessage(msg.id)}
-            className="absolute top-1 right-1 text-xs text-red-500 hover:text-red-700"
-            title="Delete Message"
+            className="absolute -top-2 -right-2 bg-white text-red-500 hover:text-red-700 text-xs rounded-full px-1 shadow"
           >
-            <RxCross1 size={12} />
+            X
           </button>
         )}
         <span className="text-xs text-gray-300 block text-right mt-1">
-          {new Date(msg.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
     </div>
