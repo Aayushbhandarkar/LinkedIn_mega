@@ -5,7 +5,7 @@ import { FiArrowLeft } from "react-icons/fi";
 import { io } from "socket.io-client";
 import axios from "axios";
 import { authDataContext } from "../../context/AuthContext";
-import dp from "../../assets/dp.webp"; // default image
+import dp from "../../assets/dp.webp";
 
 const ChatInput = ({ newMsg, setNewMsg, onSend, inputRef }) => (
   <form
@@ -38,39 +38,110 @@ const ChatInput = ({ newMsg, setNewMsg, onSend, inputRef }) => (
   </form>
 );
 
+const MessageItem = ({ msg, userId, showDelete, setShowDelete, deleteMessage }) => {
+  if (!msg?.senderId?._id) return null;
+  const isSender = msg.senderId._id === userId;
+
+  return (
+    <div className={`flex ${isSender ? "justify-end" : "justify-start"} mb-4`}>
+      {!isSender && (
+        <img
+          src={msg.senderId.profileImage || dp}
+          alt="user"
+          className="w-10 h-10 rounded-full mr-3 self-end flex-shrink-0"
+        />
+      )}
+      <div className="relative max-w-[75%]">
+        <div
+          className={`p-4 rounded-2xl break-words shadow-sm transition-all duration-300 
+            ${isSender 
+              ? "bg-blue-600 text-white rounded-br-md" 
+              : "bg-gray-100 text-gray-800 rounded-bl-md"
+            }`}
+        >
+          {msg.message}
+        </div>
+
+        {isSender && (
+          <div className="absolute -top-1 -right-6">
+            <button
+              className="text-gray-400 hover:text-gray-600 font-bold px-1 py-1 rounded-full 
+                         hover:bg-gray-200 transition-colors"
+              onClick={() => setShowDelete(showDelete === msg._id ? null : msg._id)}
+            >
+              ⋮
+            </button>
+            {showDelete === msg._id && (
+              <div className="absolute right-0 mt-1 w-28 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 hover:text-red-600 transition-colors"
+                  onClick={() => deleteMessage(msg._id)}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className={`text-xs text-gray-400 mt-1 ${isSender ? "text-right" : "text-left"}`}>
+          {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </div>
+      </div>
+
+      {isSender && (
+        <img
+          src={msg.senderId.profileImage || dp}
+          alt="you"
+          className="w-10 h-10 rounded-full ml-3 self-end flex-shrink-0"
+        />
+      )}
+    </div>
+  );
+};
+
 const ChatBox = ({ closeChat }) => {
   const { selectedChat, setSelectedChat, messages, setMessages, users } = useChat();
   const { serverUrl } = useContext(authDataContext);
+
   const [newMsg, setNewMsg] = useState("");
   const [searchUser, setSearchUser] = useState("");
   const [showDelete, setShowDelete] = useState(null);
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const socketRef = useRef(null);
   const userId = localStorage.getItem("userId");
 
-  const socket = useRef(io(serverUrl, { withCredentials: true })).current;
+  // Initialize Socket.IO once
+  useEffect(() => {
+    socketRef.current = io(serverUrl, { withCredentials: true });
 
+    if (userId) {
+      socketRef.current.emit("register", userId);
+    }
+
+    socketRef.current.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, [serverUrl, userId, setMessages]);
+
+  // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedChat]);
 
-  useEffect(() => {
-    if (!userId) return;
-    socket.emit("register", userId);
-  }, [userId, socket]);
-
-  useEffect(() => {
-    socket.on("receiveMessage", (msg) => setMessages((prev) => [...prev, msg]));
-    return () => socket.off("receiveMessage");
-  }, [socket, setMessages]);
-
-  const axiosConfig = { withCredentials: true };
-
+  // Fetch messages when chat changes
   useEffect(() => {
     if (!selectedChat?._id) return;
+
     const fetchMessages = async () => {
       try {
-        const res = await axios.get(`${serverUrl}/api/chat/${selectedChat._id}/messages`, axiosConfig);
+        const res = await axios.get(`${serverUrl}/api/chat/${selectedChat._id}/messages`, { withCredentials: true });
         setMessages(res.data || []);
       } catch (err) {
         console.error(err);
@@ -81,17 +152,19 @@ const ChatBox = ({ closeChat }) => {
 
   const sendMessage = async (text) => {
     if (!text.trim() || !selectedChat?._id) return;
+
     try {
       const res = await axios.post(
         `${serverUrl}/api/chat/send`,
         { chatId: selectedChat._id, message: text },
-        axiosConfig
+        { withCredentials: true }
       );
+
       const msgData = res.data;
-      socket.emit("sendMessage", msgData);
+      socketRef.current.emit("sendMessage", msgData);
       setMessages((prev) => [...prev, msgData]);
       setNewMsg("");
-      inputRef.current.focus();
+      inputRef.current?.focus();
     } catch (err) {
       console.error(err);
     }
@@ -99,7 +172,7 @@ const ChatBox = ({ closeChat }) => {
 
   const deleteMessage = async (msgId) => {
     try {
-      await axios.delete(`${serverUrl}/api/chat/delete/${msgId}`, axiosConfig);
+      await axios.delete(`${serverUrl}/api/chat/delete/${msgId}`, { withCredentials: true });
       setMessages((prev) => prev.filter((msg) => msg._id !== msgId));
       setShowDelete(null);
     } catch (err) {
@@ -110,7 +183,7 @@ const ChatBox = ({ closeChat }) => {
   const handleUserClick = async (user) => {
     if (!user?._id) return;
     try {
-      const res = await axios.post(`${serverUrl}/api/chat/`, { receiverId: user._id }, axiosConfig);
+      const res = await axios.post(`${serverUrl}/api/chat/`, { receiverId: user._id }, { withCredentials: true });
       if (res.data?._id) setSelectedChat(res.data);
     } catch (err) {
       console.error(err);
@@ -121,69 +194,6 @@ const ChatBox = ({ closeChat }) => {
     const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
     return fullName.includes(searchUser.toLowerCase());
   });
-
-  const Message = ({ msg }) => {
-    if (!msg?.senderId?._id) return null;
-    const isSender = msg.senderId._id === userId;
-
-    return (
-      <div className={`flex ${isSender ? "justify-end" : "justify-start"} mb-4`}>
-        {!isSender && (
-          <img
-            src={msg.senderId.profileImage || dp}
-            alt="user"
-            className="w-10 h-10 rounded-full mr-3 self-end flex-shrink-0"
-          />
-        )}
-
-        <div className="relative max-w-[75%]">
-          <div
-            className={`p-4 rounded-2xl break-words shadow-sm transition-all duration-300 
-              ${isSender 
-                ? "bg-blue-600 text-white rounded-br-md" 
-                : "bg-gray-100 text-gray-800 rounded-bl-md"
-              }`}
-          >
-            {msg.message}
-          </div>
-
-          {isSender && (
-            <div className="absolute -top-1 -right-6">
-              <button
-                className="text-gray-400 hover:text-gray-600 font-bold px-1 py-1 rounded-full 
-                           hover:bg-gray-200 transition-colors"
-                onClick={() => setShowDelete(showDelete === msg._id ? null : msg._id)}
-              >
-                ⋮
-              </button>
-              {showDelete === msg._id && (
-                <div className="absolute right-0 mt-1 w-28 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 hover:text-red-600 transition-colors"
-                    onClick={() => deleteMessage(msg._id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className={`text-xs text-gray-400 mt-1 ${isSender ? "text-right" : "text-left"}`}>
-            {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </div>
-        </div>
-
-        {isSender && (
-          <img
-            src={msg.senderId.profileImage || dp}
-            alt="you"
-            className="w-10 h-10 rounded-full ml-3 self-end flex-shrink-0"
-          />
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/40 flex items-center justify-center p-4">
@@ -205,8 +215,7 @@ const ChatBox = ({ closeChat }) => {
                   className="w-12 h-12 rounded-full border-2 border-white shadow-md"
                 />
                 <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white 
-                  ${selectedChat.members?.find((m) => m._id !== userId)?.online ? "bg-green-400" : "bg-gray-300"}`}
-                />
+                  ${selectedChat.members?.find((m) => m._id !== userId)?.online ? "bg-green-400" : "bg-gray-300"}`}/>
               </div>
               <div>
                 <h2 className="text-md font-semibold truncate max-w-[140px]">
@@ -221,7 +230,7 @@ const ChatBox = ({ closeChat }) => {
           ) : (
             <h2 className="font-semibold text-lg">Messages</h2>
           )}
-          <button 
+          <button
             className="p-1 rounded-full hover:bg-blue-500 transition-colors"
             onClick={closeChat}
           >
@@ -262,8 +271,7 @@ const ChatBox = ({ closeChat }) => {
                           className="w-12 h-12 rounded-full border-2 border-gray-200 shadow-sm"
                         />
                         <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white 
-                          ${user.online ? "bg-green-400" : "bg-gray-300"}`}
-                        />
+                          ${user.online ? "bg-green-400" : "bg-gray-300"}`}/>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-gray-900 truncate">
@@ -289,13 +297,17 @@ const ChatBox = ({ closeChat }) => {
             </div>
           ) : (
             <div className="flex-1 flex flex-col">
-              {/* Messages */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50">
-                {messages.length > 0 ? (
-                  messages.map((msg) => (
-                    <Message key={msg._id} msg={msg} />
-                  ))
-                ) : (
+                {messages.length > 0 ? messages.map((msg) => (
+                  <MessageItem
+                    key={msg._id}
+                    msg={msg}
+                    userId={userId}
+                    showDelete={showDelete}
+                    setShowDelete={setShowDelete}
+                    deleteMessage={deleteMessage}
+                  />
+                )) : (
                   <div className="h-full flex items-center justify-center">
                     <p className="text-gray-400">No messages yet. Start a conversation!</p>
                   </div>
