@@ -1,16 +1,17 @@
 import React, { createContext } from 'react'
-export const authDataContext=createContext()
-function AuthContext({children}) {
-const serverUrl="https://linkedin-mega-backend.onrender.com"
-    let value={
-        serverUrl
-    }
+
+// Capitalized context name
+export const AuthDataContext = createContext()
+
+function AuthContext({ children }) {
+  const serverUrl = "https://linkedin-mega-backend.onrender.com"
+
+  const value = { serverUrl }
+
   return (
-    <div>
-     <authDataContext.Provider value={value}> 
-     {children}
-     </authDataContext.Provider> 
-    </div>
+    <AuthDataContext.Provider value={value}>
+      {children}
+    </AuthDataContext.Provider>
   )
 }
 
