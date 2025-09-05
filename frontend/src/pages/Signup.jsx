@@ -1,56 +1,49 @@
-import React, { useContext, useState } from "react";
-import logo from "../assets/logo.svg"; // make sure file name is exactly 'logo.svg'
-import { useNavigate } from "react-router-dom";
-import { authDataContext } from "../context/AuthContext";
-import axios from "axios";
-import { userDataContext } from "../context/UserContext";
-import { Eye, EyeOff } from "lucide-react"; // ensure lucide-react is installed: npm install lucide-react
+import React, { useContext, useState } from 'react'
+import logo from "../assets/logo.svg"
+import { useNavigate } from "react-router-dom"
+import { authDataContext } from '../context/AuthContext'
+import axios from "axios"
+import { userDataContext } from '../context/UserContext'
+import { Eye, EyeOff } from "lucide-react"
 
 function Signup() {
-  const [show, setShow] = useState(false);
-  const { serverUrl } = useContext(authDataContext);
-  const { setUserData } = useContext(userDataContext);
-  const navigate = useNavigate();
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [userName, setUserName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
+  let [show, setShow] = useState(false)
+  let { serverUrl } = useContext(authDataContext)
+  let { setUserData } = useContext(userDataContext)
+  let navigate = useNavigate()
+  let [firstName, setFirstName] = useState("")
+  let [lastName, setLastName] = useState("")
+  let [userName, setUserName] = useState("")
+  let [email, setEmail] = useState("")
+  let [password, setPassword] = useState("")
+  let [loading, setLoading] = useState(false)
+  let [err, setErr] = useState("")
 
   const handleSignUp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
     try {
-      const result = await axios.post(
-        `${serverUrl}/api/auth/signup`,
-        {
-          firstName,
-          lastName,
-          userName,
-          email,
-          password,
-        },
-        { withCredentials: true }
-      );
-
-      setUserData(result.data);
-      navigate("/");
-      setErr("");
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setPassword("");
-      setUserName("");
+      let result = await axios.post(serverUrl + "/api/auth/signup", {
+        firstName,
+        lastName,
+        userName,
+        email,
+        password
+      }, { withCredentials: true })
+      setUserData(result.data)
+      navigate("/")
+      setErr("")
+      setLoading(false)
+      setFirstName("")
+      setLastName("")
+      setEmail("")
+      setPassword("")
+      setUserName("")
     } catch (error) {
-      console.error("Signup error:", error); // extra logging
-      setErr(error.response?.data?.message || "Signup failed");
-    } finally {
-      setLoading(false);
+      setErr(error.response?.data?.message || "Signup failed")
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center p-4 bg-gray-50">
@@ -59,10 +52,8 @@ function Signup() {
         {/* Left Side - Branding */}
         <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-[#004182] to-[#0077B5] p-10 text-white">
           <div className="flex flex-col justify-center">
-            <img src={logo} alt="App Logo" className="w-40 mb-8" />
-            <h1 className="text-4xl font-light mb-6">
-              Join your professional community
-            </h1>
+            <img src={logo} alt="LinkedIn Logo" className="w-40 mb-8" />
+            <h1 className="text-4xl font-light mb-6">Join your professional community</h1>
             <div className="space-y-4">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
@@ -91,17 +82,15 @@ function Signup() {
           <div className="max-w-md mx-auto">
             {/* Mobile Logo */}
             <div className="md:hidden flex justify-center mb-8">
-              <img src={logo} alt="App Logo" className="w-32" />
+              <img src={logo} alt="LinkedIn Logo" className="w-32" />
             </div>
 
             <h2 className="text-3xl font-light text-gray-900 mb-2">Sign Up</h2>
-            <p className="text-gray-600 mb-8">
-              Create your account and join your professional network
-            </p>
+            <p className="text-gray-600 mb-8">Create your account and join your professional network</p>
 
             <form onSubmit={handleSignUp} className="space-y-6">
               {/* First Name */}
-              <input
+              <input 
                 type="text"
                 placeholder="First Name"
                 required
@@ -111,7 +100,7 @@ function Signup() {
               />
 
               {/* Last Name */}
-              <input
+              <input 
                 type="text"
                 placeholder="Last Name"
                 required
@@ -121,7 +110,7 @@ function Signup() {
               />
 
               {/* Username */}
-              <input
+              <input 
                 type="text"
                 placeholder="Username"
                 required
@@ -131,7 +120,7 @@ function Signup() {
               />
 
               {/* Email */}
-              <input
+              <input 
                 type="email"
                 placeholder="Email"
                 required
@@ -142,7 +131,7 @@ function Signup() {
 
               {/* Password */}
               <div className="relative">
-                <input
+                <input 
                   type={show ? "text" : "password"}
                   placeholder="Password"
                   required
@@ -153,9 +142,9 @@ function Signup() {
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0A66C2] transition"
-                  onClick={() => setShow((prev) => !prev)}
+                  onClick={() => setShow(prev => !prev)}
                 >
-                  {show ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {show ? <EyeOff size={20}/> : <Eye size={20}/>}
                 </button>
               </div>
 
@@ -167,7 +156,7 @@ function Signup() {
 
               {/* Buttons Row */}
               <div className="flex w-full justify-between gap-4">
-                <button
+                <button 
                   type="button"
                   onClick={() => navigate("/login")}
                   className="w-1/2 py-3 bg-white text-[#0A66C2] font-semibold rounded-full border border-gray-300 hover:bg-gray-100 transition"
@@ -175,7 +164,7 @@ function Signup() {
                   Sign In
                 </button>
 
-                <button
+                <button 
                   type="submit"
                   className="w-1/2 py-3 bg-[#0A66C2] text-white font-semibold rounded-full hover:bg-[#004182] transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                   disabled={loading}
@@ -194,16 +183,13 @@ function Signup() {
 
             {/* Footer Info */}
             <div className="text-center text-gray-600 text-sm">
-              ConnectPro Network:{" "}
-              <span className="ml-2">
-                A platform to connect professionals worldwide.
-              </span>
+              ConnectPro Network: <span className="ml-2">A platform to connect professionals worldwide.</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default Signup;
+export default Signup
