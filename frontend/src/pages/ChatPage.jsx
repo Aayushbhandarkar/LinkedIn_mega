@@ -5,30 +5,36 @@ import { FiSearch } from "react-icons/fi";
 import { io } from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 
-const socket = io("https://linkedin-mega-backend.onrender.com"); // 👈 backend server URL
-
 const ChatBox = () => {
   const { selectedChat, messages, setMessages, users, setSelectedChat } = useChat();
   const [newMsg, setNewMsg] = useState("");
   const [searchUser, setSearchUser] = useState("");
   const [isOpen, setIsOpen] = useState(true);
   const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
+
+  // ✅ Initialize socket only once
+  useEffect(() => {
+    socketRef.current = io(
+      import.meta.env.MODE === "development"
+        ? "http://localhost:5000"
+        : "https://linkedin-mega-backend.onrender.com"
+    );
+
+    // Listen for incoming messages
+    socketRef.current.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, [setMessages]);
 
   // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedChat]);
-
-  // Listen for incoming messages
-  useEffect(() => {
-    socket.on("receiveMessage", (msg) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
-    return () => {
-      socket.off("receiveMessage");
-    };
-  }, [setMessages]);
 
   const sendMessage = (msg) => {
     if (!msg.trim() || !selectedChat) return;
@@ -45,14 +51,14 @@ const ChatBox = () => {
     setMessages([...messages, msgData]);
 
     // Send to server
-    socket.emit("sendMessage", msgData);
+    socketRef.current.emit("sendMessage", msgData);
 
     setNewMsg("");
   };
 
   const deleteMessage = (msgId) => {
     setMessages(messages.filter((m) => m.id !== msgId));
-    socket.emit("deleteMessage", msgId); // optional if backend supports it
+    socketRef.current.emit("deleteMessage", msgId); // optional if backend supports it
   };
 
   const filteredUsers = users?.filter((user) =>
@@ -74,7 +80,6 @@ const ChatBox = () => {
 
   return (
     <div className="fixed bottom-0 right-0 w-[400px] h-[500px] lg:h-[600px] flex flex-col border shadow-2xl bg-white rounded-t-xl overflow-hidden">
-      
       {/* Header */}
       <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-white">
         <div className="flex items-center gap-3">
