@@ -46,7 +46,7 @@ const MessageItem = ({ msg, userId, showDelete, setShowDelete, deleteMessage }) 
     <div className={`flex ${isSender ? "justify-end" : "justify-start"} mb-4`}>
       {!isSender && (
         <img
-          src={msg.senderId.profileImage || dp}
+          src={msg.senderId?.profileImage || dp}
           alt="user"
           className="w-10 h-10 rounded-full mr-3 self-end flex-shrink-0"
         />
@@ -85,13 +85,13 @@ const MessageItem = ({ msg, userId, showDelete, setShowDelete, deleteMessage }) 
         )}
 
         <div className={`text-xs text-gray-400 mt-1 ${isSender ? "text-right" : "text-left"}`}>
-          {new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          {new Date(msg?.createdAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
       </div>
 
       {isSender && (
         <img
-          src={msg.senderId.profileImage || dp}
+          src={msg.senderId?.profileImage || dp}
           alt="you"
           className="w-10 h-10 rounded-full ml-3 self-end flex-shrink-0"
         />
@@ -111,22 +111,26 @@ const ChatBox = ({ closeChat }) => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const socketRef = useRef(null);
-  const userId = localStorage.getItem("userId");
+  const userId = localStorage.getItem("userId") || "";
 
   // Initialize Socket.IO once
   useEffect(() => {
-    socketRef.current = io(serverUrl, { withCredentials: true });
+    try {
+      socketRef.current = io(serverUrl, { withCredentials: true });
 
-    if (userId) {
-      socketRef.current.emit("register", userId);
+      if (userId) {
+        socketRef.current.emit("register", userId);
+      }
+
+      socketRef.current.on("receiveMessage", (msg) => {
+        setMessages((prev) => [...prev, msg]);
+      });
+    } catch (err) {
+      console.error(err);
     }
 
-    socketRef.current.on("receiveMessage", (msg) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
     return () => {
-      socketRef.current.disconnect();
+      socketRef.current?.disconnect();
     };
   }, [serverUrl, userId, setMessages]);
 
@@ -161,7 +165,7 @@ const ChatBox = ({ closeChat }) => {
       );
 
       const msgData = res.data;
-      socketRef.current.emit("sendMessage", msgData);
+      socketRef.current?.emit("sendMessage", msgData);
       setMessages((prev) => [...prev, msgData]);
       setNewMsg("");
       inputRef.current?.focus();
@@ -191,7 +195,7 @@ const ChatBox = ({ closeChat }) => {
   };
 
   const filteredUsers = users?.filter((user) => {
-    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
+    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.toLowerCase();
     return fullName.includes(searchUser.toLowerCase());
   });
 
@@ -210,20 +214,21 @@ const ChatBox = ({ closeChat }) => {
               </button>
               <div className="relative">
                 <img
-                  src={selectedChat.members?.find((m) => m._id !== userId)?.profileImage || dp}
+                  src={selectedChat.members?.find((m) => m?._id !== userId)?.profileImage || dp}
                   alt="chat user"
                   className="w-12 h-12 rounded-full border-2 border-white shadow-md"
                 />
                 <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white 
-                  ${selectedChat.members?.find((m) => m._id !== userId)?.online ? "bg-green-400" : "bg-gray-300"}`}/>
+                  ${selectedChat.members?.find((m) => m?._id !== userId)?.online ? "bg-green-400" : "bg-gray-300"}`}/>
               </div>
               <div>
                 <h2 className="text-md font-semibold truncate max-w-[140px]">
-                  {selectedChat.members?.find((m) => m._id !== userId)?.firstName}{" "}
-                  {selectedChat.members?.find((m) => m._id !== userId)?.lastName}
+                  {selectedChat.members?.find((m) => m?._id !== userId)?.firstName || ""}
+                  {" "}
+                  {selectedChat.members?.find((m) => m?._id !== userId)?.lastName || ""}
                 </h2>
                 <span className="text-xs opacity-90">
-                  {selectedChat.members?.find((m) => m._id !== userId)?.online ? "Online" : "Offline"}
+                  {selectedChat.members?.find((m) => m?._id !== userId)?.online ? "Online" : "Offline"}
                 </span>
               </div>
             </div>
@@ -266,22 +271,22 @@ const ChatBox = ({ closeChat }) => {
                     >
                       <div className="relative">
                         <img
-                          src={user.profileImage || dp}
-                          alt={user.firstName}
+                          src={user?.profileImage || dp}
+                          alt={user?.firstName || ""}
                           className="w-12 h-12 rounded-full border-2 border-gray-200 shadow-sm"
                         />
                         <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white 
-                          ${user.online ? "bg-green-400" : "bg-gray-300"}`}/>
+                          ${user?.online ? "bg-green-400" : "bg-gray-300"}`}/>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-gray-900 truncate">
-                          {user.firstName} {user.lastName}
+                          {user?.firstName || ""} {user?.lastName || ""}
                         </p>
                         <div className="flex items-center gap-1">
-                          <span className={`text-xs ${user.online ? "text-green-600" : "text-gray-400"}`}>
-                            {user.online ? "Online" : "Offline"}
+                          <span className={`text-xs ${user?.online ? "text-green-600" : "text-gray-400"}`}>
+                            {user?.online ? "Online" : "Offline"}
                           </span>
-                          {user.isConnection && (
+                          {user?.isConnection && (
                             <span className="text-xs text-blue-500 font-medium">• Connection</span>
                           )}
                         </div>
@@ -298,7 +303,7 @@ const ChatBox = ({ closeChat }) => {
           ) : (
             <div className="flex-1 flex flex-col">
               <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50">
-                {messages.length > 0 ? messages.map((msg) => (
+                {messages?.length > 0 ? messages.map((msg) => (
                   <MessageItem
                     key={msg._id}
                     msg={msg}
