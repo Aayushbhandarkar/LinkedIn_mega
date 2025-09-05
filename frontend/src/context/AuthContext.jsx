@@ -1,20 +1,17 @@
-import React, { createContext } from "react";
-
-export const AuthDataContext = createContext();
-
-function AuthProvider({ children }) {
-  const serverUrl =
-    process.env.NODE_ENV === "development"
-      ? "http://localhost:5000"
-      : "https://linkedin-mega-backend.onrender.com";
-
-  const value = { serverUrl };
-
+import React, { createContext } from 'react'
+export const authDataContext=createContext()
+function AuthContext({children}) {
+const serverUrl="https://linkedin-mega-backend.onrender.com"
+    let value={
+        serverUrl
+    }
   return (
-    <AuthDataContext.Provider value={value}>
-      {children}
-    </AuthDataContext.Provider>
-  );
+    <div>
+     <authDataContext.Provider value={value}> 
+     {children}
+     </authDataContext.Provider> 
+    </div>
+  )
 }
 
-export default AuthProvider;
+export default AuthContext
