@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { useChat } from "../../context/ChatContext";
 import { RxCross1 } from "react-icons/rx";
 import { FiSearch } from "react-icons/fi";
+import { io } from "socket.io-client";
+import { v4 as uuidv4 } from "uuid";
+
+const socket = io("https://linkedin-mega-backend.onrender.com"); // 👈 backend server URL
 
 const ChatBox = () => {
   const { selectedChat, messages, setMessages, users, setSelectedChat } = useChat();
@@ -10,27 +14,48 @@ const ChatBox = () => {
   const [isOpen, setIsOpen] = useState(true);
   const messagesEndRef = useRef(null);
 
+  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, selectedChat]);
 
+  // Listen for incoming messages
+  useEffect(() => {
+    socket.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socket.off("receiveMessage");
+    };
+  }, [setMessages]);
+
   const sendMessage = (msg) => {
-    if (!msg.trim()) return;
+    if (!msg.trim() || !selectedChat) return;
+
     const msgData = {
+      id: uuidv4(),
       sender: "You",
       text: msg,
       timestamp: new Date(),
-      id: Date.now(),
+      chatId: selectedChat.id || selectedChat._id,
     };
+
+    // Add locally
     setMessages([...messages, msgData]);
+
+    // Send to server
+    socket.emit("sendMessage", msgData);
+
     setNewMsg("");
   };
 
   const deleteMessage = (msgId) => {
     setMessages(messages.filter((m) => m.id !== msgId));
+    socket.emit("deleteMessage", msgId); // optional if backend supports it
   };
 
-  const filteredUsers = users?.filter(user =>
+  const filteredUsers = users?.filter((user) =>
     user.name.toLowerCase().includes(searchUser.toLowerCase())
   );
 
@@ -105,7 +130,11 @@ const ChatBox = () => {
                     />
                     <div className="truncate">
                       <p className="font-medium text-gray-800 truncate">{user.name}</p>
-                      <span className={`text-xs ${user.online ? "text-green-500" : "text-gray-400"}`}>
+                      <span
+                        className={`text-xs ${
+                          user.online ? "text-green-500" : "text-gray-400"
+                        }`}
+                      >
                         {user.online ? "Online" : "Offline"}
                       </span>
                     </div>
@@ -121,9 +150,13 @@ const ChatBox = () => {
         <>
           {/* Messages */}
           <div className="flex-1 p-3 overflow-y-auto bg-gray-50 space-y-2">
-            {messages.map((msg) => (
-              <Message key={msg.id} msg={msg} deleteMessage={deleteMessage} />
-            ))}
+            {messages.length === 0 ? (
+              <p className="text-center text-gray-400 mt-5">No messages yet</p>
+            ) : (
+              messages.map((msg) => (
+                <Message key={msg.id} msg={msg} deleteMessage={deleteMessage} />
+              ))
+            )}
             <div ref={messagesEndRef} />
           </div>
           {/* Chat Input */}
@@ -171,19 +204,27 @@ const Message = ({ msg, deleteMessage }) => {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} relative`}>
       <div
-        className={`relative max-w-[70%] p-2 rounded-lg ${isUser ? "bg-blue-600 text-white rounded-br-none" : "bg-gray-200 text-gray-800 rounded-bl-none"}`}
+        className={`relative max-w-[70%] p-2 rounded-lg ${
+          isUser
+            ? "bg-blue-600 text-white rounded-br-none"
+            : "bg-gray-200 text-gray-800 rounded-bl-none"
+        }`}
       >
         {msg.text}
         {isUser && (
           <button
             onClick={() => deleteMessage(msg.id)}
-            className="absolute -top-2 -right-2 bg-white text-red-500 hover:text-red-700 text-xs rounded-full px-1 shadow"
+            className="absolute top-1 right-1 text-xs text-red-500 hover:text-red-700"
+            title="Delete Message"
           >
-            X
+            <RxCross1 size={12} />
           </button>
         )}
         <span className="text-xs text-gray-300 block text-right mt-1">
-          {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          {new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
       </div>
     </div>
