@@ -12,7 +12,6 @@ import chatRouter from "./routes/chat.routes.js";
 import http from "http";
 import { Server } from "socket.io";
 
-import Chat from "./models/chat.model.js";
 import Message from "./models/message.model.js";
 
 dotenv.config();
@@ -34,7 +33,6 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (like mobile apps or Postman)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -42,7 +40,8 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -85,15 +84,18 @@ io.on("connection", (socket) => {
     console.log(`Socket ${socket.id} joined room ${chatId}`);
   });
 
-  socket.on("sendMessage", async ({ chatId, senderId, receiverId, message }) => {
-    try {
-      const newMessage = new Message({ chatId, senderId, receiverId, message });
-      await newMessage.save();
-      io.to(chatId).emit("receiveMessage", newMessage);
-    } catch (err) {
-      console.error("Message save error:", err.message);
+  socket.on(
+    "sendMessage",
+    async ({ chatId, senderId, receiverId, message }) => {
+      try {
+        const newMessage = new Message({ chatId, senderId, receiverId, message });
+        await newMessage.save();
+        io.to(chatId).emit("receiveMessage", newMessage);
+      } catch (err) {
+        console.error("Message save error:", err.message);
+      }
     }
-  });
+  );
 
   socket.on("disconnect", () => {
     for (let [key, value] of userSocketMap.entries()) {
