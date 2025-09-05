@@ -2,19 +2,19 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import Nav from '../components/Nav'
 import dp from "../assets/dp.webp"
 import { FiPlus, FiCamera } from "react-icons/fi"
-import { userDataContext } from '../context/UserContext.jsx'
+import { UserDataContext } from '../context/UserContext.jsx' // ✅ Fix
 import { HiPencil } from "react-icons/hi2"
 import EditProfile from '../components/EditProfile'
 import { RxCross1 } from "react-icons/rx"
 import { BsImage } from "react-icons/bs"
 import axios from 'axios'
-import { authDataContext } from '../context/AuthContext'
+import { AuthDataContext } from '../context/AuthContext' // ✅ Fix
 import Post from '../components/Post'
 import ConnectionButton from '../components/ConnectionButton'
 
 function Home() {
-  let { userData, edit, setEdit, postData, getPost, handleGetProfile } = useContext(userDataContext)
-  let { serverUrl } = useContext(authDataContext)
+  let { userData, edit, setEdit, postData, getPost, handleGetProfile } = useContext(UserDataContext) // ✅ Fix
+  let { serverUrl } = useContext(AuthDataContext) // ✅ Fix
   let [frontendImage, setFrontendImage] = useState("")
   let [backendImage, setBackendImage] = useState("")
   let [description, setDescription] = useState("")
@@ -36,6 +36,10 @@ function Home() {
       formdata.append("description", description)
       if (backendImage) formdata.append("image", backendImage)
       await axios.post(serverUrl + "/api/post/create", formdata, { withCredentials: true })
+
+      // ✅ Refresh posts immediately
+      await getPost()
+
       setPosting(false)
       setUploadPost(false)
       setDescription("")
@@ -43,7 +47,7 @@ function Home() {
       setBackendImage("")
     } catch (error) {
       setPosting(false)
-      console.log(error)
+      console.error("Error uploading post:", error.response?.data || error.message)
     }
   }
 
@@ -52,28 +56,25 @@ function Home() {
       let result = await axios.get(serverUrl + "/api/user/suggestedusers", { withCredentials: true })
       setSuggestedUser(result.data)
     } catch (error) {
-      console.log(error)
+      console.error("Error fetching suggested users:", error.response?.data || error.message)
     }
   }
 
   useEffect(() => {
+    if (!serverUrl) return
     handleSuggestedUsers()
-  }, [])
-
-  useEffect(() => {
-    getPost()
-  }, [uploadPost])
+  }, [serverUrl]) // ✅ include serverUrl
 
   return (
     <div className="w-full min-h-screen bg-[#f4f2ee] pt-20 flex justify-center items-start gap-6 px-4 pb-10 relative">
       {edit && <EditProfile />}
       <Nav />
 
-      {/* Left Sidebar - Profile Card */}
+      {/* Left Sidebar */}
       <div className="hidden lg:flex lg:w-1/4 flex-col gap-6 sticky top-24">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
           <div className="relative h-20 bg-gradient-to-r from-blue-700 to-blue-800 cursor-pointer" onClick={() => setEdit(true)}>
-            <img src={userData.coverImage || ""} alt="Cover" className="w-full h-full object-cover" />
+            <img src={userData?.coverImage || ""} alt="Cover" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/20 flex items-end justify-end p-2">
               <FiCamera className="w-5 h-5 text-white cursor-pointer hover:scale-110 transition" />
             </div>
@@ -83,7 +84,7 @@ function Home() {
             <div className="flex justify-center -mt-10 mb-2">
               <div className="relative group" onClick={() => setEdit(true)}>
                 <img 
-                  src={userData.profileImage || dp} 
+                  src={userData?.profileImage || dp} 
                   alt="Profile" 
                   className="w-20 h-20 rounded-full border-4 border-white shadow-md object-cover group-hover:brightness-90 transition duration-300" 
                 />
@@ -94,9 +95,9 @@ function Home() {
             </div>
 
             <div className="text-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 truncate px-2">{`${userData.firstName} ${userData.lastName}`}</h2>
-              <p className="text-sm text-gray-600 mt-1 truncate px-2">{userData.headline || "Add a headline"}</p>
-              <p className="text-xs text-gray-500 mt-1 truncate px-2">{userData.location}</p>
+              <h2 className="text-lg font-semibold text-gray-900 truncate px-2">{`${userData?.firstName || ""} ${userData?.lastName || ""}`}</h2>
+              <p className="text-sm text-gray-600 mt-1 truncate px-2">{userData?.headline || "Add a headline"}</p>
+              <p className="text-xs text-gray-500 mt-1 truncate px-2">{userData?.location || ""}</p>
             </div>
 
             <hr className="border-gray-200 my-3" />
@@ -113,10 +114,10 @@ function Home() {
 
       {/* Main Feed */}
       <div className="w-full lg:w-2/4 flex flex-col gap-4">
-        {/* Create Post Card */}
+        {/* Create Post */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center gap-3 hover:shadow-md transition-all">
           <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-            <img src={userData.profileImage || dp} alt="Profile" className="w-full h-full object-cover" />
+            <img src={userData?.profileImage || dp} alt="Profile" className="w-full h-full object-cover" />
           </div>
           <button
             className="flex-1 h-12 border border-gray-300 rounded-full px-5 text-left text-gray-500 hover:bg-gray-50 transition-all"
@@ -128,28 +129,19 @@ function Home() {
 
         {/* Posts */}
         {postData.map((post, index) => (
-          <Post
-            key={index}
-            id={post._id}
-            description={post.description}
-            author={post.author}
-            image={post.image}
-            like={post.like}
-            comment={post.comment}
-            createdAt={post.createdAt}
-          />
+          <Post key={post._id || index} {...post} />
         ))}
       </div>
 
-      {/* Right Sidebar - Suggested Users */}
+      {/* Right Sidebar */}
       <div className="hidden lg:flex lg:w-1/4 flex-col gap-6 sticky top-24">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all">
           <h1 className="text-lg font-semibold text-gray-800 mb-4">Suggested Users</h1>
           {suggestedUser.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {suggestedUser.map((su, i) => (
+              {suggestedUser.map((su) => (
                 <div
-                  key={i}
+                  key={su._id}
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div 
@@ -194,10 +186,10 @@ function Home() {
 
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full overflow-hidden">
-                <img src={userData.profileImage || dp} alt="Profile" className="w-full h-full object-cover" />
+                <img src={userData?.profileImage || dp} alt="Profile" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-800">{`${userData.firstName} ${userData.lastName}`}</h3>
+                <h3 className="text-sm font-semibold text-gray-800">{`${userData?.firstName || ""} ${userData?.lastName || ""}`}</h3>
                 <p className="text-xs text-gray-500">Post to anyone</p>
               </div>
             </div>
