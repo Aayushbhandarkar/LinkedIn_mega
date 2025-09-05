@@ -1,10 +1,10 @@
 import React, { useContext, useState } from "react";
-import logo from "../assets/logo.svg";
+import logo from "../assets/logo.svg"; // make sure file name is exactly 'logo.svg'
 import { useNavigate } from "react-router-dom";
 import { authDataContext } from "../context/AuthContext";
 import axios from "axios";
 import { userDataContext } from "../context/UserContext";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react"; // ensure lucide-react is installed: npm install lucide-react
 
 function Signup() {
   const [show, setShow] = useState(false);
@@ -17,26 +17,14 @@ function Signup() {
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
   const handleSignUp = async (e) => {
     e.preventDefault();
-
-    // ✅ Basic validation
-    if (password.length < 8) {
-      setErr("Password must be at least 8 characters");
-      return;
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setErr("Enter a valid email address");
-      return;
-    }
-
     setLoading(true);
     try {
-      let result = await axios.post(
+      const result = await axios.post(
         `${serverUrl}/api/auth/signup`,
         {
           firstName,
@@ -51,15 +39,14 @@ function Signup() {
       setUserData(result.data);
       navigate("/");
       setErr("");
-
-      // ✅ Clear only on success
       setFirstName("");
       setLastName("");
-      setUserName("");
       setEmail("");
       setPassword("");
+      setUserName("");
     } catch (error) {
-      setErr(error.response?.data?.message || "Something went wrong. Try again.");
+      console.error("Signup error:", error); // extra logging
+      setErr(error.response?.data?.message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -67,11 +54,12 @@ function Signup() {
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      {/* Main Container */}
       <div className="w-full max-w-6xl flex rounded-xl shadow-lg overflow-hidden bg-white">
-        {/* Left side - Branding */}
+        {/* Left Side - Branding */}
         <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-[#004182] to-[#0077B5] p-10 text-white">
           <div className="flex flex-col justify-center">
-            <img src={logo} alt="LinkedIn Logo" className="w-40 mb-8" />
+            <img src={logo} alt="App Logo" className="w-40 mb-8" />
             <h1 className="text-4xl font-light mb-6">
               Join your professional community
             </h1>
@@ -98,11 +86,12 @@ function Signup() {
           </div>
         </div>
 
-        {/* Right side - Signup form */}
+        {/* Right Side - Signup Form */}
         <div className="w-full md:w-3/5 p-8 md:p-12">
           <div className="max-w-md mx-auto">
+            {/* Mobile Logo */}
             <div className="md:hidden flex justify-center mb-8">
-              <img src={logo} alt="LinkedIn Logo" className="w-32" />
+              <img src={logo} alt="App Logo" className="w-32" />
             </div>
 
             <h2 className="text-3xl font-light text-gray-900 mb-2">Sign Up</h2>
@@ -111,6 +100,7 @@ function Signup() {
             </p>
 
             <form onSubmit={handleSignUp} className="space-y-6">
+              {/* First Name */}
               <input
                 type="text"
                 placeholder="First Name"
@@ -120,6 +110,7 @@ function Signup() {
                 onChange={(e) => setFirstName(e.target.value)}
               />
 
+              {/* Last Name */}
               <input
                 type="text"
                 placeholder="Last Name"
@@ -129,6 +120,7 @@ function Signup() {
                 onChange={(e) => setLastName(e.target.value)}
               />
 
+              {/* Username */}
               <input
                 type="text"
                 placeholder="Username"
@@ -138,6 +130,7 @@ function Signup() {
                 onChange={(e) => setUserName(e.target.value)}
               />
 
+              {/* Email */}
               <input
                 type="email"
                 placeholder="Email"
@@ -147,6 +140,7 @@ function Signup() {
                 onChange={(e) => setEmail(e.target.value)}
               />
 
+              {/* Password */}
               <div className="relative">
                 <input
                   type={show ? "text" : "password"}
@@ -158,7 +152,6 @@ function Signup() {
                 />
                 <button
                   type="button"
-                  aria-label={show ? "Hide password" : "Show password"}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0A66C2] transition"
                   onClick={() => setShow((prev) => !prev)}
                 >
@@ -172,6 +165,7 @@ function Signup() {
                 </div>
               )}
 
+              {/* Buttons Row */}
               <div className="flex w-full justify-between gap-4">
                 <button
                   type="button"
@@ -191,14 +185,16 @@ function Signup() {
               </div>
             </form>
 
+            {/* Separator */}
             <div className="my-6 flex items-center">
               <div className="flex-grow border-t border-gray-300"></div>
               <span className="mx-4 text-gray-500 text-sm">or</span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
+            {/* Footer Info */}
             <div className="text-center text-gray-600 text-sm">
-              ConnectPro Network:
+              ConnectPro Network:{" "}
               <span className="ml-2">
                 A platform to connect professionals worldwide.
               </span>
