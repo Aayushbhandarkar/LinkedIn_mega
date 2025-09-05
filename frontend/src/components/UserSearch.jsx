@@ -1,13 +1,11 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { useChat } from "../context/ChatContext";
-import { authDataContext } from "../context/AuthContext";
 
 const UserSearch = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const { setSelectedUser } = useChat();
-  const { serverUrl } = useContext(authDataContext); // ✅ use correct server URL
 
   const handleSearch = async (e) => {
     const value = e.target.value;
@@ -15,14 +13,12 @@ const UserSearch = () => {
 
     if (value.trim().length > 0) {
       try {
-        const res = await axios.get(
-          `${serverUrl}/api/user/search?name=${value}`, // ✅ full URL
-          { withCredentials: true }
-        );
-        setResults(res.data.users || []); // ✅ safe fallback
+        const res = await axios.get(`/api/user/search?name=${value}`, {
+          withCredentials: true,
+        });
+        setResults(res.data.users); // assume backend returns { users: [...] }
       } catch (err) {
-        console.error("Search error:", err);
-        setResults([]);
+        console.log(err);
       }
     } else {
       setResults([]);
@@ -47,7 +43,7 @@ const UserSearch = () => {
               onClick={() => setSelectedUser(user)} // select for chat
               className="p-2 cursor-pointer hover:bg-gray-100"
             >
-              {user.firstName} {user.lastName} ({user.userName})
+              {user.name} ({user.userName})
             </li>
           ))}
         </ul>
