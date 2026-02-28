@@ -10,6 +10,7 @@ const ChatProvider = ({ children }) => {
   const { serverUrl } = useContext(authDataContext);
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
+  
   const [users, setUsers] = useState([]); // dynamic users list
 
   // Fetch all users for chat
